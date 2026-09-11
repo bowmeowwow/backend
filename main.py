@@ -4,9 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from auth import router as auth_router
+from chat import router as chat_router
+from clinic import router as clinic_router
 from database import Base, SessionLocal, engine
+from insurance import router as insurance_router
 from pets import router as pets_router
-from seed import seed_test_user
+from seed import seed_mock_clinics, seed_mock_insurance, seed_test_user
 
 app = FastAPI(title="Bow-Meow-Wow API")
 
@@ -37,12 +40,17 @@ def on_startup():
     db = SessionLocal()
     try:
         seed_test_user(db)
+        seed_mock_clinics(db)
+        seed_mock_insurance(db)
     finally:
         db.close()
 
 
 app.include_router(auth_router)
 app.include_router(pets_router)
+app.include_router(clinic_router)
+app.include_router(insurance_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")

@@ -51,3 +51,52 @@ class PetResponse(BaseModel):
     name: str
     category: PetCategory
     age: int
+
+
+class ClinicResponse(BaseModel):
+    id: int
+    name: str
+    district: str
+    address: str
+    phone: str
+
+    class Config:
+        from_attributes = True
+
+
+class ClinicPriceResponse(BaseModel):
+    procedure: str
+    price: int
+
+    class Config:
+        from_attributes = True
+
+
+class InsurancePolicyResponse(BaseModel):
+    insurerName: str
+    monthlyPremium: int
+    coverageLimit: int
+    status: str
+
+
+class ClaimCreateRequest(BaseModel):
+    petId: int
+    description: str
+    amount: int
+
+
+class ClaimResponse(BaseModel):
+    id: int
+    petId: int
+    description: str
+    amount: int
+    status: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    petId: Optional[int] = None
+
+
+class ChatResponse(BaseModel):
+    reply: str

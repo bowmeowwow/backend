@@ -5,3 +5,4 @@ bcrypt==4.0.1
 pyjwt==2.10.1
 pymysql==1.1.1
 cryptography==43.0.3
+google-genai==1.7.0
