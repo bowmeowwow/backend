@@ -1,16 +1,50 @@
-# 샘플 Python 스크립트입니다.
+from fastapi import FastAPI, Request
+from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-# Shift+F10을(를) 눌러 실행하거나 내 코드로 바꿉니다.
-# 클래스, 파일, 도구 창, 액션 및 설정을 어디서나 검색하려면 Shift 두 번을(를) 누릅니다.
+from auth import router as auth_router
+from database import Base, SessionLocal, engine
+from pets import router as pets_router
+from seed import seed_test_user
+
+app = FastAPI(title="Bow-Meow-Wow API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def print_hi(name):
-    # 스크립트를 디버그하려면 하단 코드 줄의 중단점을 사용합니다.
-    print(f'Hi, {name}')  # 중단점을 전환하려면 Ctrl+F8을(를) 누릅니다.
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"message": exc.detail})
 
 
-# 스크립트를 실행하려면 여백의 녹색 버튼을 누릅니다.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    first_error = exc.errors()[0]
+    field = ".".join(str(loc) for loc in first_error["loc"] if loc != "body")
+    return JSONResponse(status_code=422, content={"message": f"{field}: {first_error['msg']}"})
 
-# https://www.jetbrains.com/help/pycharm/에서 PyCharm 도움말 참조
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_test_user(db)
+    finally:
+        db.close()
+
+
+app.include_router(auth_router)
+app.include_router(pets_router)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
