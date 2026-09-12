@@ -43,6 +43,7 @@ class Clinic(Base):
     __tablename__ = "clinics"
 
     id = Column(Integer, primary_key=True, index=True)
+    external_id = Column(String(64), unique=True, nullable=True, index=True)
     name = Column(String(255), nullable=False)
     category = Column(Enum(ClinicCategory), nullable=False, index=True)
     district = Column(String(100), nullable=False, index=True)
