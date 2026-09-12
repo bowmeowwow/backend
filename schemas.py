@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as date_type
 from typing import Optional
 
 from pydantic import BaseModel, model_validator
@@ -106,7 +106,7 @@ class ChatResponse(BaseModel):
 class ScheduleCreateRequest(BaseModel):
     petId: Optional[int] = None
     petName: Optional[str] = None
-    date: date
+    date: date_type
     time: str
     title: str
     category: ScheduleCategory
@@ -121,7 +121,7 @@ class ScheduleCreateRequest(BaseModel):
 class ScheduleUpdateRequest(BaseModel):
     petId: Optional[int] = None
     petName: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[date_type] = None
     time: Optional[str] = None
     title: Optional[str] = None
     category: Optional[ScheduleCategory] = None
@@ -131,7 +131,7 @@ class ScheduleResponse(BaseModel):
     id: int
     petId: Optional[int] = None
     petName: Optional[str] = None
-    date: date
+    date: date_type
     time: str
     title: str
     category: ScheduleCategory
