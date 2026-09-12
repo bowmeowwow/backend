@@ -30,23 +30,23 @@ class Pet(Base):
     birth_year = Column(Integer, nullable=False)
 
 
+class ClinicCategory(str, enum.Enum):
+    VET = "VET"
+    HOTEL = "HOTEL"
+    GROOMING = "GROOMING"
+
+
 class Clinic(Base):
     __tablename__ = "clinics"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
+    category = Column(Enum(ClinicCategory), nullable=False, index=True)
     district = Column(String(100), nullable=False, index=True)
     address = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=False)
-
-
-class ClinicPrice(Base):
-    __tablename__ = "clinic_prices"
-
-    id = Column(Integer, primary_key=True, index=True)
-    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False, index=True)
-    procedure = Column(String(255), nullable=False)
-    price = Column(Integer, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
 
 class InsurancePolicy(Base):

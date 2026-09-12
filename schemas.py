@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, model_validator
 
-from models import PetCategory, ScheduleCategory
+from models import ClinicCategory, PetCategory, ScheduleCategory
 
 
 class LoginRequest(BaseModel):
@@ -57,17 +57,12 @@ class PetResponse(BaseModel):
 class ClinicResponse(BaseModel):
     id: int
     name: str
+    category: ClinicCategory
     district: str
     address: str
     phone: str
-
-    class Config:
-        from_attributes = True
-
-
-class ClinicPriceResponse(BaseModel):
-    procedure: str
-    price: int
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     class Config:
         from_attributes = True
