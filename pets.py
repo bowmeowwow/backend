@@ -18,6 +18,8 @@ def _to_response(pet: Pet) -> PetResponse:
         name=pet.name,
         category=pet.category,
         age=date.today().year - pet.birth_year,
+        birthDate=pet.birth_date,
+        weight=pet.weight,
     )
 
 
@@ -39,6 +41,8 @@ def create_pet(
         name=payload.name,
         category=payload.category,
         birth_year=date.today().year - payload.age,
+        birth_date=payload.birthDate,
+        weight=payload.weight,
     )
     db.add(pet)
     db.commit()
@@ -66,6 +70,10 @@ def update_pet(
         pet.category = payload.category
     if payload.age is not None:
         pet.birth_year = date.today().year - payload.age
+    if payload.birthDate is not None:
+        pet.birth_date = payload.birthDate
+    if payload.weight is not None:
+        pet.weight = payload.weight
     db.commit()
     db.refresh(pet)
     return _to_response(pet)

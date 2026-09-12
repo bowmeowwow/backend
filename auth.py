@@ -34,7 +34,12 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.")
 
-    user = User(name=payload.name, email=payload.email, hashed_password=hash_password(payload.password))
+    user = User(
+        name=payload.name,
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        phone=payload.phone,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)

@@ -15,12 +15,14 @@ class SignupRequest(BaseModel):
     email: str
     password: str
     name: str
+    phone: Optional[str] = None
 
 
 class UserResponse(BaseModel):
     id: int
     name: str
     email: str
+    phone: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -39,12 +41,16 @@ class PetCreateRequest(BaseModel):
     name: str
     category: PetCategory
     age: int
+    birthDate: Optional[date_type] = None
+    weight: Optional[float] = None
 
 
 class PetUpdateRequest(BaseModel):
     name: Optional[str] = None
     category: Optional[PetCategory] = None
     age: Optional[int] = None
+    birthDate: Optional[date_type] = None
+    weight: Optional[float] = None
 
 
 class PetResponse(BaseModel):
@@ -52,6 +58,8 @@ class PetResponse(BaseModel):
     name: str
     category: PetCategory
     age: int
+    birthDate: Optional[date_type] = None
+    weight: Optional[float] = None
 
 
 class ClinicResponse(BaseModel):

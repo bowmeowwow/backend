@@ -18,6 +18,7 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    phone = Column(String(50), nullable=True)
 
 
 class Pet(Base):
@@ -28,6 +29,8 @@ class Pet(Base):
     name = Column(String(255), nullable=False)
     category = Column(Enum(PetCategory), nullable=False)
     birth_year = Column(Integer, nullable=False)
+    birth_date = Column(Date, nullable=True)
+    weight = Column(Float, nullable=True)
 
 
 class ClinicCategory(str, enum.Enum):
