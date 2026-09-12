@@ -1,8 +1,9 @@
+from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
-from models import PetCategory
+from models import PetCategory, ScheduleCategory
 
 
 class LoginRequest(BaseModel):
@@ -100,3 +101,37 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class ScheduleCreateRequest(BaseModel):
+    petId: Optional[int] = None
+    petName: Optional[str] = None
+    date: date
+    time: str
+    title: str
+    category: ScheduleCategory
+
+    @model_validator(mode="after")
+    def check_pet_reference(self):
+        if self.petId is None and not self.petName:
+            raise ValueError("petId 또는 petName 중 하나는 필요합니다.")
+        return self
+
+
+class ScheduleUpdateRequest(BaseModel):
+    petId: Optional[int] = None
+    petName: Optional[str] = None
+    date: Optional[date] = None
+    time: Optional[str] = None
+    title: Optional[str] = None
+    category: Optional[ScheduleCategory] = None
+
+
+class ScheduleResponse(BaseModel):
+    id: int
+    petId: Optional[int] = None
+    petName: Optional[str] = None
+    date: date
+    time: str
+    title: str
+    category: ScheduleCategory

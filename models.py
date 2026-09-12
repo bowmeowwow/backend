@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Enum, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, String
 
 from database import Base
 
@@ -69,3 +69,24 @@ class InsuranceClaim(Base):
     description = Column(String(500), nullable=False)
     amount = Column(Integer, nullable=False)
     status = Column(String(50), nullable=False, default="PENDING")
+
+
+class ScheduleCategory(str, enum.Enum):
+    VACCINATION = "VACCINATION"
+    CHECKUP = "CHECKUP"
+    GROOMING = "GROOMING"
+    MEDICATION = "MEDICATION"
+    OTHER = "OTHER"
+
+
+class Schedule(Base):
+    __tablename__ = "schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    pet_id = Column(Integer, ForeignKey("pets.id"), nullable=True, index=True)
+    pet_name = Column(String(255), nullable=True)
+    date = Column(Date, nullable=False, index=True)
+    time = Column(String(5), nullable=False)
+    title = Column(String(255), nullable=False)
+    category = Column(Enum(ScheduleCategory), nullable=False)

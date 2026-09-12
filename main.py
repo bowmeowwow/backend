@@ -9,6 +9,7 @@ from clinic import router as clinic_router
 from database import Base, SessionLocal, engine
 from insurance import router as insurance_router
 from pets import router as pets_router
+from schedules import router as schedules_router
 from seed import seed_mock_clinics, seed_mock_insurance, seed_test_user
 
 app = FastAPI(title="Bow-Meow-Wow API")
@@ -51,6 +52,7 @@ app.include_router(pets_router)
 app.include_router(clinic_router)
 app.include_router(insurance_router)
 app.include_router(chat_router)
+app.include_router(schedules_router)
 
 
 @app.get("/health")
