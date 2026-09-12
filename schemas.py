@@ -138,3 +138,5 @@ class ScheduleResponse(BaseModel):
     title: str
     category: ScheduleCategory
     location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None

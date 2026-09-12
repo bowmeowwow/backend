@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Date, Enum, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, Enum, Float, ForeignKey, Integer, String
 
 from database import Base
 
@@ -91,3 +91,5 @@ class Schedule(Base):
     title = Column(String(255), nullable=False)
     category = Column(Enum(ScheduleCategory), nullable=False)
     location = Column(String(255), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)

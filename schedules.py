@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
+from geocoding import geocode_address
 from models import Pet, Schedule, User
 from schemas import MessageResponse, ScheduleCreateRequest, ScheduleResponse, ScheduleUpdateRequest
 
@@ -22,7 +23,15 @@ def _to_response(schedule: Schedule) -> ScheduleResponse:
         title=schedule.title,
         category=schedule.category,
         location=schedule.location,
+        latitude=schedule.latitude,
+        longitude=schedule.longitude,
     )
+
+
+def _apply_location(schedule: Schedule, location: Optional[str]) -> None:
+    schedule.location = location
+    coords = geocode_address(location) if location else None
+    schedule.latitude, schedule.longitude = coords if coords else (None, None)
 
 
 def _resolve_pet(
@@ -58,8 +67,8 @@ def create_schedule(
         time=payload.time,
         title=payload.title,
         category=payload.category,
-        location=payload.location,
     )
+    _apply_location(schedule, payload.location)
     db.add(schedule)
     db.commit()
     db.refresh(schedule)
@@ -103,7 +112,7 @@ def update_schedule(
     if payload.category is not None:
         schedule.category = payload.category
     if payload.location is not None:
-        schedule.location = payload.location
+        _apply_location(schedule, payload.location)
 
     db.commit()
     db.refresh(schedule)
