@@ -110,6 +110,7 @@ class ScheduleCreateRequest(BaseModel):
     time: str
     title: str
     category: ScheduleCategory
+    location: Optional[str] = None
 
     @model_validator(mode="after")
     def check_pet_reference(self):
@@ -125,6 +126,7 @@ class ScheduleUpdateRequest(BaseModel):
     time: Optional[str] = None
     title: Optional[str] = None
     category: Optional[ScheduleCategory] = None
+    location: Optional[str] = None
 
 
 class ScheduleResponse(BaseModel):
@@ -135,3 +137,4 @@ class ScheduleResponse(BaseModel):
     time: str
     title: str
     category: ScheduleCategory
+    location: Optional[str] = None

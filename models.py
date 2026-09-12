@@ -90,3 +90,4 @@ class Schedule(Base):
     time = Column(String(5), nullable=False)
     title = Column(String(255), nullable=False)
     category = Column(Enum(ScheduleCategory), nullable=False)
+    location = Column(String(255), nullable=True)

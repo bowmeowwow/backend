@@ -21,6 +21,7 @@ def _to_response(schedule: Schedule) -> ScheduleResponse:
         time=schedule.time,
         title=schedule.title,
         category=schedule.category,
+        location=schedule.location,
     )
 
 
@@ -57,6 +58,7 @@ def create_schedule(
         time=payload.time,
         title=payload.title,
         category=payload.category,
+        location=payload.location,
     )
     db.add(schedule)
     db.commit()
@@ -100,6 +102,8 @@ def update_schedule(
         schedule.title = payload.title
     if payload.category is not None:
         schedule.category = payload.category
+    if payload.location is not None:
+        schedule.location = payload.location
 
     db.commit()
     db.refresh(schedule)
