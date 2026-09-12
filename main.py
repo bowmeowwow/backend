@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from auth import router as auth_router
 from chat import router as chat_router
 from clinic import router as clinic_router
-from database import Base, SessionLocal, engine
+from database import SessionLocal
 from insurance import router as insurance_router
 from pets import router as pets_router
 from schedules import router as schedules_router
@@ -37,7 +37,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_test_user(db)
