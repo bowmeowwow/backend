@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Date, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
 
 from database import Base
 
@@ -97,3 +97,15 @@ class Schedule(Base):
     location = Column(String(255), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+
+
+class NewsArticle(Base):
+    __tablename__ = "news_articles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    external_id = Column(String(64), unique=True, nullable=False, index=True)
+    title = Column(String(500), nullable=False)
+    summary = Column(String(1000), nullable=True)
+    source = Column(String(255), nullable=True)
+    url = Column(String(1000), nullable=False)
+    published_at = Column(DateTime, nullable=True, index=True)

@@ -1,4 +1,5 @@
 from datetime import date as date_type
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, model_validator
@@ -166,3 +167,12 @@ class ScheduleResponse(BaseModel):
     location: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+
+class NewsArticleResponse(BaseModel):
+    id: int
+    title: str
+    summary: Optional[str] = None
+    source: Optional[str] = None
+    url: str
+    publishedAt: Optional[datetime] = None
