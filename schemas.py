@@ -1,5 +1,5 @@
 from datetime import date as date_type
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -96,6 +96,29 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class RecommendRequest(BaseModel):
+    latitude: float
+    longitude: float
+    category: Optional[ClinicCategory] = None
+    petId: Optional[int] = None
+
+
+class NearbyPlaceResponse(BaseModel):
+    id: int
+    name: str
+    category: ClinicCategory
+    address: str
+    phone: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distanceKm: float
+
+
+class RecommendResponse(BaseModel):
+    reply: str
+    places: List[NearbyPlaceResponse]
 
 
 class ScheduleCreateRequest(BaseModel):

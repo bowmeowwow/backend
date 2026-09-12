@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db
-from models import InsurancePolicy, Pet, User
-from schemas import ChatRequest, ChatResponse
+from distance import haversine_km
+from models import Clinic, InsurancePolicy, Pet, User
+from schemas import ChatRequest, ChatResponse, NearbyPlaceResponse, RecommendRequest, RecommendResponse
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -69,3 +70,69 @@ def chat(
         raise HTTPException(status_code=502, detail="AI 응답 생성에 실패했습니다.")
 
     return ChatResponse(reply=response.text)
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+def recommend_places(
+    payload: RecommendRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Clinic).filter(Clinic.latitude.isnot(None), Clinic.longitude.isnot(None))
+    if payload.category is not None:
+        query = query.filter(Clinic.category == payload.category)
+
+    nearby = sorted(
+        (
+            (clinic, haversine_km(payload.latitude, payload.longitude, clinic.latitude, clinic.longitude))
+            for clinic in query.all()
+        ),
+        key=lambda pair: pair[1],
+    )[:5]
+
+    places = [
+        NearbyPlaceResponse(
+            id=clinic.id,
+            name=clinic.name,
+            category=clinic.category,
+            address=clinic.address,
+            phone=clinic.phone,
+            latitude=clinic.latitude,
+            longitude=clinic.longitude,
+            distanceKm=round(distance_km, 2),
+        )
+        for clinic, distance_km in nearby
+    ]
+
+    pet_context = ""
+    if payload.petId is not None:
+        pet = db.query(Pet).filter(Pet.id == payload.petId, Pet.user_id == current_user.id).first()
+        if pet is None:
+            raise HTTPException(status_code=404, detail="반려동물을 찾을 수 없습니다.")
+        age = date.today().year - pet.birth_year
+        pet_context = f"\n반려동물: {pet.name} ({pet.category.value}, {age}살)"
+
+    if not places:
+        return RecommendResponse(reply="근처에 등록된 장소가 없어요. 다른 지역으로 다시 찾아볼까요?", places=[])
+
+    places_text = "\n".join(
+        f"- {place.name} ({place.category.value}, {place.distanceKm}km, {place.address})" for place in places
+    )
+    system_prompt = (
+        "당신은 반려동물 보호자를 돕는 AI 동물 도우미입니다. "
+        "아래 사용자 주변 장소 목록만 근거로, 친근한 말투로 1~2곳을 추천해주세요."
+        f"{pet_context}\n\n주변 장소:\n{places_text}"
+    )
+
+    try:
+        client = _get_client()
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents="지금 위치 근처에 어디로 가면 좋을지 추천해줘",
+            config=genai.types.GenerateContentConfig(system_instruction=system_prompt),
+        )
+        reply = response.text
+    except (HTTPException, genai_errors.APIError):
+        reply = "추천 문구 생성엔 실패했지만, 근처 장소 목록은 확인하실 수 있어요."
+
+    return RecommendResponse(reply=reply, places=places)
