@@ -1,7 +1,8 @@
 from datetime import date
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
@@ -10,6 +11,9 @@ from models import Pet, User
 from schemas import MessageResponse, PetCreateRequest, PetResponse, PetUpdateRequest
 
 router = APIRouter(prefix="/api/pets", tags=["pets"])
+
+MAX_PHOTO_SIZE = 3 * 1024 * 1024
+ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 def _to_response(pet: Pet) -> PetResponse:
@@ -20,6 +24,7 @@ def _to_response(pet: Pet) -> PetResponse:
         age=date.today().year - pet.birth_year,
         birthDate=pet.birth_date,
         weight=pet.weight,
+        photoUrl=f"/api/pets/{pet.id}/photo" if pet.photo is not None else None,
     )
 
 
@@ -89,3 +94,51 @@ def delete_pet(
     db.delete(pet)
     db.commit()
     return MessageResponse(message="삭제되었습니다.")
+
+
+@router.put("/{pet_id}/photo", response_model=PetResponse)
+async def upload_pet_photo(
+    pet_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    pet = _get_owned_pet(pet_id, current_user, db)
+    if file.content_type not in ALLOWED_PHOTO_TYPES:
+        raise HTTPException(status_code=400, detail="jpeg/png/webp 이미지만 업로드할 수 있습니다.")
+
+    content = await file.read()
+    if len(content) > MAX_PHOTO_SIZE:
+        raise HTTPException(status_code=413, detail="이미지 용량은 3MB 이하만 가능합니다.")
+
+    pet.photo = content
+    pet.photo_content_type = file.content_type
+    db.commit()
+    db.refresh(pet)
+    return _to_response(pet)
+
+
+@router.get("/{pet_id}/photo")
+def get_pet_photo(
+    pet_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    pet = _get_owned_pet(pet_id, current_user, db)
+    if pet.photo is None:
+        raise HTTPException(status_code=404, detail="등록된 사진이 없습니다.")
+    return Response(content=pet.photo, media_type=pet.photo_content_type or "image/jpeg")
+
+
+@router.delete("/{pet_id}/photo", response_model=PetResponse)
+def delete_pet_photo(
+    pet_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    pet = _get_owned_pet(pet_id, current_user, db)
+    pet.photo = None
+    pet.photo_content_type = None
+    db.commit()
+    db.refresh(pet)
+    return _to_response(pet)

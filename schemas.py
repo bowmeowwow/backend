@@ -61,6 +61,7 @@ class PetResponse(BaseModel):
     age: int
     birthDate: Optional[date_type] = None
     weight: Optional[float] = None
+    photoUrl: Optional[str] = None
 
 
 class ClinicResponse(BaseModel):
@@ -176,3 +177,36 @@ class NewsArticleResponse(BaseModel):
     source: Optional[str] = None
     url: str
     publishedAt: Optional[datetime] = None
+
+
+class ExpenseCreateRequest(BaseModel):
+    petId: int
+    description: str
+    amount: int
+    date: Optional[date_type] = None
+
+
+class ExpenseUpdateRequest(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[int] = None
+    date: Optional[date_type] = None
+
+
+class ExpenseResponse(BaseModel):
+    id: int
+    petId: int
+    description: str
+    amount: int
+    date: date_type
+
+
+class PetExpenseSummary(BaseModel):
+    petId: int
+    petName: str
+    total: int
+
+
+class ExpenseSummaryResponse(BaseModel):
+    month: str
+    total: int
+    byPet: List[PetExpenseSummary]

@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, LargeBinary, String
 
 from database import Base
 
@@ -31,6 +31,8 @@ class Pet(Base):
     birth_year = Column(Integer, nullable=False)
     birth_date = Column(Date, nullable=True)
     weight = Column(Float, nullable=True)
+    photo = Column(LargeBinary(length=8_000_000), nullable=True)
+    photo_content_type = Column(String(100), nullable=True)
 
 
 class ClinicCategory(str, enum.Enum):
@@ -97,6 +99,17 @@ class Schedule(Base):
     location = Column(String(255), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+
+
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    pet_id = Column(Integer, ForeignKey("pets.id"), nullable=False, index=True)
+    description = Column(String(255), nullable=False)
+    amount = Column(Integer, nullable=False)
+    date = Column(Date, nullable=False, index=True)
 
 
 class NewsArticle(Base):

@@ -9,6 +9,7 @@ from auth import router as auth_router
 from chat import router as chat_router
 from clinic import router as clinic_router
 from database import SessionLocal
+from expenses import router as expenses_router
 from insurance import router as insurance_router
 from models import NewsArticle
 from news import refresh_news
@@ -83,6 +84,7 @@ app.include_router(insurance_router)
 app.include_router(chat_router)
 app.include_router(schedules_router)
 app.include_router(news_router)
+app.include_router(expenses_router)
 
 
 @app.get("/health")
