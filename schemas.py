@@ -99,22 +99,6 @@ class ClaimResponse(BaseModel):
     status: str
 
 
-class ChatRequest(BaseModel):
-    message: str
-    petId: Optional[int] = None
-
-
-class ChatResponse(BaseModel):
-    reply: str
-
-
-class RecommendRequest(BaseModel):
-    latitude: float
-    longitude: float
-    category: Optional[ClinicCategory] = None
-    petId: Optional[int] = None
-
-
 class NearbyPlaceResponse(BaseModel):
     id: int
     name: str
@@ -124,6 +108,25 @@ class NearbyPlaceResponse(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     distanceKm: float
+
+
+class ChatRequest(BaseModel):
+    message: str
+    petId: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    places: Optional[List[NearbyPlaceResponse]] = None
+
+
+class RecommendRequest(BaseModel):
+    latitude: float
+    longitude: float
+    category: Optional[ClinicCategory] = None
+    petId: Optional[int] = None
 
 
 class RecommendResponse(BaseModel):
