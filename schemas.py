@@ -134,6 +134,12 @@ class RecommendResponse(BaseModel):
     places: List[NearbyPlaceResponse]
 
 
+class CompareResponse(BaseModel):
+    places: Optional[List[NearbyPlaceResponse]] = None
+    gemini: str
+    grok: str
+
+
 class ScheduleCreateRequest(BaseModel):
     petId: Optional[int] = None
     petName: Optional[str] = None

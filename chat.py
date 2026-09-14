@@ -1,7 +1,8 @@
 import os
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 from google import genai
 from google.genai import errors as genai_errors
@@ -11,7 +12,14 @@ from auth import get_current_user
 from database import get_db
 from distance import haversine_km
 from models import Clinic, ClinicCategory, InsurancePolicy, Pet, User
-from schemas import ChatRequest, ChatResponse, NearbyPlaceResponse, RecommendRequest, RecommendResponse
+from schemas import (
+    ChatRequest,
+    ChatResponse,
+    CompareResponse,
+    NearbyPlaceResponse,
+    RecommendRequest,
+    RecommendResponse,
+)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -24,6 +32,13 @@ CATEGORY_WORDS = {
     ClinicCategory.HOTEL: ["호텔", "펫호텔"],
     ClinicCategory.GROOMING: ["미용실", "미용"],
 }
+
+# Unverified against a real successful response - the xAI account used for testing had
+# no credits yet (every call 403'd with "no credits or licenses"), so this couldn't be
+# confirmed the way gemini-3.6-flash's name was. Re-check against docs/console once the
+# account has credits.
+GROK_MODEL = "grok-4-fast"
+GROK_API_URL = "https://api.x.ai/v1/chat/completions"
 
 
 def _get_client() -> genai.Client:
@@ -107,6 +122,42 @@ def _build_context(payload: ChatRequest, current_user: User, db: Session) -> str
     return "\n".join(lines)
 
 
+def _resolve_prompt(
+    payload: ChatRequest, current_user: User, db: Session
+) -> Tuple[Optional[List[NearbyPlaceResponse]], Optional[str], Optional[str]]:
+    """Returns (places, system_prompt, early_reply).
+
+    If early_reply is set, that's the final answer and no LLM call is needed
+    (missing location permission, or no places found nearby).
+    """
+    if _wants_nearby_recommendation(payload.message):
+        if payload.latitude is None or payload.longitude is None:
+            return None, None, "근처 장소를 추천해드리려면 위치 정보가 필요해요! 위치 권한을 허용해 주세요."
+
+        category = _detect_category(payload.message)
+        places = _find_nearby_places(db, payload.latitude, payload.longitude, category)
+        if not places:
+            return [], None, "근처에 등록된 장소가 없어요. 다른 지역으로 다시 찾아볼까요?"
+
+        pet_context = _pet_context_line(payload.petId, current_user, db)
+        places_text = "\n".join(
+            f"- {place.name} ({place.category.value}, {place.distanceKm}km, {place.address})" for place in places
+        )
+        system_prompt = (
+            "당신은 반려동물 보호자를 돕는 AI 동물 도우미입니다. "
+            "아래 사용자 주변 장소 목록만 근거로, 친근한 말투로 1~2곳을 추천해주세요."
+            f"{pet_context}\n\n주변 장소:\n{places_text}"
+        )
+        return places, system_prompt, None
+
+    context = _build_context(payload, current_user, db)
+    system_prompt = (
+        "당신은 반려동물 건강 상담과 펫보험 안내를 돕는 어시스턴트입니다. "
+        "아래 사용자 정보를 참고해 답변하세요.\n" + context
+    )
+    return None, system_prompt, None
+
+
 def _generate(message: str, system_prompt: str) -> str:
     client = _get_client()
     response = client.models.generate_content(
@@ -117,52 +168,69 @@ def _generate(message: str, system_prompt: str) -> str:
     return response.text
 
 
+def _call_grok(message: str, system_prompt: str) -> str:
+    api_key = os.getenv("GROK_API_KEY")
+    if not api_key:
+        return "Grok 비교 기능을 사용할 수 없습니다 (API 키가 설정되지 않았습니다)."
+
+    try:
+        response = requests.post(
+            GROK_API_URL,
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "model": GROK_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message},
+                ],
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+    except (requests.RequestException, KeyError, IndexError, ValueError):
+        return "Grok 응답 생성에 실패했습니다."
+
+
 @router.post("", response_model=ChatResponse)
 def chat(
     payload: ChatRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if _wants_nearby_recommendation(payload.message):
-        if payload.latitude is None or payload.longitude is None:
-            return ChatResponse(
-                reply="근처 장소를 추천해드리려면 위치 정보가 필요해요! 위치 권한을 허용해 주세요.",
-                places=None,
-            )
+    places, system_prompt, early_reply = _resolve_prompt(payload, current_user, db)
+    if early_reply is not None:
+        return ChatResponse(reply=early_reply, places=places)
 
-        category = _detect_category(payload.message)
-        places = _find_nearby_places(db, payload.latitude, payload.longitude, category)
-        pet_context = _pet_context_line(payload.petId, current_user, db)
-
-        if not places:
-            return ChatResponse(reply="근처에 등록된 장소가 없어요. 다른 지역으로 다시 찾아볼까요?", places=[])
-
-        places_text = "\n".join(
-            f"- {place.name} ({place.category.value}, {place.distanceKm}km, {place.address})" for place in places
-        )
-        system_prompt = (
-            "당신은 반려동물 보호자를 돕는 AI 동물 도우미입니다. "
-            "아래 사용자 주변 장소 목록만 근거로, 친근한 말투로 1~2곳을 추천해주세요."
-            f"{pet_context}\n\n주변 장소:\n{places_text}"
-        )
-        try:
-            reply = _generate(payload.message, system_prompt)
-        except genai_errors.APIError:
-            reply = "추천 문구 생성엔 실패했지만, 근처 장소 목록은 확인하실 수 있어요."
-
-        return ChatResponse(reply=reply, places=places)
-
-    context = _build_context(payload, current_user, db)
-    system_prompt = (
-        "당신은 반려동물 건강 상담과 펫보험 안내를 돕는 어시스턴트입니다. "
-        "아래 사용자 정보를 참고해 답변하세요.\n" + context
-    )
     try:
         reply = _generate(payload.message, system_prompt)
     except genai_errors.APIError:
-        raise HTTPException(status_code=502, detail="AI 응답 생성에 실패했습니다.")
+        if places is not None:
+            reply = "추천 문구 생성엔 실패했지만, 근처 장소 목록은 확인하실 수 있어요."
+        else:
+            raise HTTPException(status_code=502, detail="AI 응답 생성에 실패했습니다.")
 
-    return ChatResponse(reply=reply, places=None)
+    return ChatResponse(reply=reply, places=places)
+
+
+@router.post("/compare", response_model=CompareResponse)
+def compare_chat(
+    payload: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    places, system_prompt, early_reply = _resolve_prompt(payload, current_user, db)
+    if early_reply is not None:
+        return CompareResponse(places=places, gemini=early_reply, grok=early_reply)
+
+    try:
+        gemini_reply = _generate(payload.message, system_prompt)
+    except genai_errors.APIError:
+        gemini_reply = "Gemini 응답 생성에 실패했습니다."
+
+    grok_reply = _call_grok(payload.message, system_prompt)
+
+    return CompareResponse(places=places, gemini=gemini_reply, grok=grok_reply)
 
 
 @router.post("/recommend", response_model=RecommendResponse)
