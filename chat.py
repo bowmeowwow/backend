@@ -33,12 +33,11 @@ CATEGORY_WORDS = {
     ClinicCategory.GROOMING: ["미용실", "미용"],
 }
 
-# Unverified against a real successful response - the xAI account used for testing had
-# no credits yet (every call 403'd with "no credits or licenses"), so this couldn't be
-# confirmed the way gemini-3.6-flash's name was. Re-check against docs/console once the
-# account has credits.
-GROK_MODEL = "grok-4-fast"
-GROK_API_URL = "https://api.x.ai/v1/chat/completions"
+# Groq (groq.com fast inference), not xAI's Grok - initially built for Grok, but that
+# account had no credits, and the user handed over a Groq key instead. Verified against
+# a real successful response.
+GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 def _get_client() -> genai.Client:
@@ -168,17 +167,17 @@ def _generate(message: str, system_prompt: str) -> str:
     return response.text
 
 
-def _call_grok(message: str, system_prompt: str) -> str:
-    api_key = os.getenv("GROK_API_KEY")
+def _call_groq(message: str, system_prompt: str) -> str:
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        return "Grok 비교 기능을 사용할 수 없습니다 (API 키가 설정되지 않았습니다)."
+        return "Groq 비교 기능을 사용할 수 없습니다 (API 키가 설정되지 않았습니다)."
 
     try:
         response = requests.post(
-            GROK_API_URL,
+            GROQ_API_URL,
             headers={"Authorization": f"Bearer {api_key}"},
             json={
-                "model": GROK_MODEL,
+                "model": GROQ_MODEL,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message},
@@ -189,7 +188,7 @@ def _call_grok(message: str, system_prompt: str) -> str:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except (requests.RequestException, KeyError, IndexError, ValueError):
-        return "Grok 응답 생성에 실패했습니다."
+        return "Groq 응답 생성에 실패했습니다."
 
 
 @router.post("", response_model=ChatResponse)
@@ -221,16 +220,16 @@ def compare_chat(
 ):
     places, system_prompt, early_reply = _resolve_prompt(payload, current_user, db)
     if early_reply is not None:
-        return CompareResponse(places=places, gemini=early_reply, grok=early_reply)
+        return CompareResponse(places=places, gemini=early_reply, groq=early_reply)
 
     try:
         gemini_reply = _generate(payload.message, system_prompt)
     except genai_errors.APIError:
         gemini_reply = "Gemini 응답 생성에 실패했습니다."
 
-    grok_reply = _call_grok(payload.message, system_prompt)
+    groq_reply = _call_groq(payload.message, system_prompt)
 
-    return CompareResponse(places=places, gemini=gemini_reply, grok=grok_reply)
+    return CompareResponse(places=places, gemini=gemini_reply, groq=groq_reply)
 
 
 @router.post("/recommend", response_model=RecommendResponse)

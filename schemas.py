@@ -137,7 +137,7 @@ class RecommendResponse(BaseModel):
 class CompareResponse(BaseModel):
     places: Optional[List[NearbyPlaceResponse]] = None
     gemini: str
-    grok: str
+    groq: str
 
 
 class ScheduleCreateRequest(BaseModel):
