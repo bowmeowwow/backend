@@ -191,6 +191,18 @@ def _call_groq(message: str, system_prompt: str) -> str:
         return "Groq 응답 생성에 실패했습니다."
 
 
+def _generate_reply(model: str, message: str, system_prompt: str, has_places: bool) -> str:
+    if model == "groq":
+        return _call_groq(message, system_prompt)
+
+    try:
+        return _generate(message, system_prompt)
+    except genai_errors.APIError:
+        if has_places:
+            return "추천 문구 생성엔 실패했지만, 근처 장소 목록은 확인하실 수 있어요."
+        raise HTTPException(status_code=502, detail="AI 응답 생성에 실패했습니다.")
+
+
 @router.post("", response_model=ChatResponse)
 def chat(
     payload: ChatRequest,
@@ -201,14 +213,7 @@ def chat(
     if early_reply is not None:
         return ChatResponse(reply=early_reply, places=places)
 
-    try:
-        reply = _generate(payload.message, system_prompt)
-    except genai_errors.APIError:
-        if places is not None:
-            reply = "추천 문구 생성엔 실패했지만, 근처 장소 목록은 확인하실 수 있어요."
-        else:
-            raise HTTPException(status_code=502, detail="AI 응답 생성에 실패했습니다.")
-
+    reply = _generate_reply(payload.model or "gemini", payload.message, system_prompt, has_places=places is not None)
     return ChatResponse(reply=reply, places=places)
 
 

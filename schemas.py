@@ -1,6 +1,6 @@
 from datetime import date as date_type
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -115,6 +115,7 @@ class ChatRequest(BaseModel):
     petId: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    model: Optional[Literal["gemini", "groq"]] = None
 
 
 class ChatResponse(BaseModel):
